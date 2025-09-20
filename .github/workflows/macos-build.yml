@@ -27,14 +27,6 @@ jobs:
       - name: Build with PyInstaller
         run: |
           pyinstaller --onefile --name MeetingScheduler main.py
-        # replace main.py with your script filename
-
-      - name: Package artifact
-        run: |
-          cd dist
-          # rename for clarity and zip it (optional)
-          mv MeetingScheduler MeetingScheduler-macos
-          tar -czf MeetingScheduler-macos.tar.gz MeetingScheduler-macos
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
