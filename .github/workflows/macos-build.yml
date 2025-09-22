@@ -2,51 +2,69 @@ name: macOS universal build
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  build-universal:
+  build-arm64:
     runs-on: macos-14
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
-      - name: Install build deps
-        run: |
+      - run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
-
-      - name: Build arm64 binary
-        run: |
           pyinstaller --onefile --name MeetingScheduler main.py
-          mkdir -p dist-arm64
-          mv dist/MeetingScheduler dist-arm64/
+          mv dist/MeetingScheduler MeetingScheduler-arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MeetingScheduler-arm64
+          path: MeetingScheduler-arm64
 
-      - name: Build x86_64 binary
-        run: |
-          arch -x86_64 pyinstaller --onefile --name MeetingScheduler main.py
-          mkdir -p dist-x86_64
-          mv dist/MeetingScheduler dist-x86_64/
+  build-x86_64:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pyinstaller --onefile --name MeetingScheduler main.py
+          mv dist/MeetingScheduler MeetingScheduler-x86_64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MeetingScheduler-x86_64
+          path: MeetingScheduler-x86_64
 
+  merge-universal:
+    runs-on: macos-14
+    needs: [build-arm64, build-x86_64]
+    steps:
+      - name: Download arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: MeetingScheduler-arm64
+          path: arm64
+      - name: Download x86_64
+        uses: actions/download-artifact@v4
+        with:
+          name: MeetingScheduler-x86_64
+          path: x86_64
       - name: Create universal binary
         run: |
-          mkdir -p dist/universal
-          lipo -create dist-arm64/MeetingScheduler dist-x86_64/MeetingScheduler \
-            -output dist/universal/MeetingScheduler
-
-      - name: Verify universal binary
-        run: lipo -info dist/universal/MeetingScheduler
-
-      - name: Upload universal binary
+          mkdir -p dist
+          lipo -create arm64/MeetingScheduler-x86_64 2>/dev/null && echo "WRONG FILES" && exit 1 || true
+          lipo -create arm64/MeetingScheduler x86_64/MeetingScheduler -output dist/MeetingScheduler
+      - name: Verify
+        run: |
+          lipo -info dist/MeetingScheduler
+          file dist/MeetingScheduler
+      - name: Upload universal
         uses: actions/upload-artifact@v4
         with:
           name: MeetingScheduler-universal
-          path: dist/universal/MeetingScheduler
+          path: dist/MeetingScheduler
