@@ -6,68 +6,33 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-arm64:
+  build-universal2:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: |
-          python -m pip install --upgrade pip
-          pip install pyinstaller
-          pyinstaller --onefile --name MeetingScheduler main.py
-          mkdir -p out/arm64
-          mv dist/MeetingScheduler out/arm64/MeetingScheduler
-      - uses: actions/upload-artifact@v4
-        with:
-          name: mac-arm64
-          path: out/arm64
 
-  build-x86_64:
-    runs-on: macos-13
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: |
-          python -m pip install --upgrade pip
-          pip install pyinstaller
-          pyinstaller --onefile --name MeetingScheduler main.py
-          mkdir -p out/x86_64
-          mv dist/MeetingScheduler out/x86_64/MeetingScheduler
-      - uses: actions/upload-artifact@v4
-        with:
-          name: mac-x86_64
-          path: out/x86_64
+      # Install the official universal2 Python 3.11 from python.org
+      - name: Install Python 3.11 universal2
+        run: |
+          PYVER=3.11.9
+          PKG=python-$PYVER-macos11.pkg
+          curl -L -o $PKG https://www.python.org/ftp/python/$PYVER/$PKG
+          sudo installer -pkg $PKG -target /
+          echo "/Library/Frameworks/Python.framework/Versions/$PYVER/bin" >> $GITHUB_PATH
 
-  merge-universal:
-    runs-on: macos-14
-    needs: [build-arm64, build-x86_64]
-    steps:
-      - name: Download arm64
-        uses: actions/download-artifact@v4
-        with:
-          name: mac-arm64
-          path: arm64
-      - name: Download x86_64
-        uses: actions/download-artifact@v4
-        with:
-          name: mac-x86_64
-          path: x86_64
-      - name: Merge with lipo
+      - name: Build universal2 with PyInstaller
         run: |
-          ls -l arm64
-          ls -l x86_64
-          mkdir -p dist
-          lipo -create arm64/MeetingScheduler x86_64/MeetingScheduler -output dist/MeetingScheduler
-      - name: Verify universal
-        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pyinstaller
+          pyinstaller --onefile --name MeetingScheduler \
+            --target-architecture universal2 \
+            main.py
+          # Verify
           lipo -info dist/MeetingScheduler
           file dist/MeetingScheduler
-      - name: Upload universal
-        uses: actions/upload-artifact@v4
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: MeetingScheduler-universal
+          name: MeetingScheduler-universal2
           path: dist/MeetingScheduler
+          if-no-files-found: error
