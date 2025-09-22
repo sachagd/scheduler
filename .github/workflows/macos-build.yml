@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Install the official universal2 Python 3.11 from python.org
+      # Install the official universal2 Python
       - name: Install Python 3.11 universal2
         run: |
           PYVER=3.11.9
@@ -20,14 +20,16 @@ jobs:
           sudo installer -pkg $PKG -target /
           echo "/Library/Frameworks/Python.framework/Versions/$PYVER/bin" >> $GITHUB_PATH
 
-      - name: Build universal2 with PyInstaller
+      # Create and activate a venv to avoid PEP 668 issues
+      - name: Setup virtualenv
         run: |
+          python3 -m venv venv
+          source venv/bin/activate
           python3 -m pip install --upgrade pip
           python3 -m pip install pyinstaller
           pyinstaller --onefile --name MeetingScheduler \
-            --target-architecture universal2 \
-            main.py
-          # Verify
+            --target-architecture universal2 main.py
+          # Verify both slices are present
           lipo -info dist/MeetingScheduler
           file dist/MeetingScheduler
 
