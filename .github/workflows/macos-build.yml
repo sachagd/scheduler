@@ -26,16 +26,24 @@ jobs:
 
       - name: Build arm64 binary
         run: |
-          pyinstaller --onefile --name MeetingScheduler-arm64 main.py
+          pyinstaller --onefile --name MeetingScheduler main.py
+          mkdir -p dist-arm64
+          mv dist/MeetingScheduler dist-arm64/
 
       - name: Build x86_64 binary
         run: |
-          arch -x86_64 pyinstaller --onefile --name MeetingScheduler-x86_64 main.py
+          arch -x86_64 pyinstaller --onefile --name MeetingScheduler main.py
+          mkdir -p dist-x86_64
+          mv dist/MeetingScheduler dist-x86_64/
 
       - name: Create universal binary
         run: |
           mkdir -p dist/universal
-          lipo -create dist/MeetingScheduler-arm64 dist/MeetingScheduler-x86_64 -output dist/universal/MeetingScheduler
+          lipo -create dist-arm64/MeetingScheduler dist-x86_64/MeetingScheduler \
+            -output dist/universal/MeetingScheduler
+
+      - name: Verify universal binary
+        run: lipo -info dist/universal/MeetingScheduler
 
       - name: Upload universal binary
         uses: actions/upload-artifact@v4
