@@ -1,4 +1,4 @@
-name: macOS build
+name: macOS universal build
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-macos:
-    runs-on: macos-latest
+  build-universal:
+    runs-on: macos-14
 
     steps:
       - name: Checkout
@@ -24,11 +24,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyinstaller
 
-      - name: Build with PyInstaller
-        run: pyinstaller --onefile --name MeetingScheduler main.py
+      - name: Build arm64 binary
+        run: |
+          pyinstaller --onefile --name MeetingScheduler-arm64 main.py
 
-      - name: Upload artifact
+      - name: Build x86_64 binary
+        run: |
+          arch -x86_64 pyinstaller --onefile --name MeetingScheduler-x86_64 main.py
+
+      - name: Create universal binary
+        run: |
+          mkdir -p dist/universal
+          lipo -create dist/MeetingScheduler-arm64 dist/MeetingScheduler-x86_64 -output dist/universal/MeetingScheduler
+
+      - name: Upload universal binary
         uses: actions/upload-artifact@v4
         with:
-          name: MeetingScheduler-macos
-          path: dist/MeetingScheduler
+          name: MeetingScheduler-universal
+          path: dist/universal/MeetingScheduler
