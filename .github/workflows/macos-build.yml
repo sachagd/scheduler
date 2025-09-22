@@ -24,12 +24,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyinstaller
 
-      - name: Build with PyInstaller
-        run: |
-          pyinstaller --windowed --onefile --name MeetingScheduler main.py
+      - name: Build app bundle
+        run: pyinstaller --windowed --name MeetingScheduler main.py
 
-      - name: Upload artifact
+      - name: Upload .app
         uses: actions/upload-artifact@v4
         with:
           name: MeetingScheduler-macos
-          path: dist/MeetingScheduler
+          path: dist/MeetingScheduler.app
