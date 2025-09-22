@@ -17,11 +17,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyinstaller
           pyinstaller --onefile --name MeetingScheduler main.py
-          mv dist/MeetingScheduler MeetingScheduler-arm64
+          mkdir -p out/arm64
+          mv dist/MeetingScheduler out/arm64/MeetingScheduler
       - uses: actions/upload-artifact@v4
         with:
-          name: MeetingScheduler-arm64
-          path: MeetingScheduler-arm64
+          name: mac-arm64
+          path: out/arm64
 
   build-x86_64:
     runs-on: macos-13
@@ -34,11 +35,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyinstaller
           pyinstaller --onefile --name MeetingScheduler main.py
-          mv dist/MeetingScheduler MeetingScheduler-x86_64
+          mkdir -p out/x86_64
+          mv dist/MeetingScheduler out/x86_64/MeetingScheduler
       - uses: actions/upload-artifact@v4
         with:
-          name: MeetingScheduler-x86_64
-          path: MeetingScheduler-x86_64
+          name: mac-x86_64
+          path: out/x86_64
 
   merge-universal:
     runs-on: macos-14
@@ -47,19 +49,20 @@ jobs:
       - name: Download arm64
         uses: actions/download-artifact@v4
         with:
-          name: MeetingScheduler-arm64
+          name: mac-arm64
           path: arm64
       - name: Download x86_64
         uses: actions/download-artifact@v4
         with:
-          name: MeetingScheduler-x86_64
+          name: mac-x86_64
           path: x86_64
-      - name: Create universal binary
+      - name: Merge with lipo
         run: |
+          ls -l arm64
+          ls -l x86_64
           mkdir -p dist
-          lipo -create arm64/MeetingScheduler-x86_64 2>/dev/null && echo "WRONG FILES" && exit 1 || true
           lipo -create arm64/MeetingScheduler x86_64/MeetingScheduler -output dist/MeetingScheduler
-      - name: Verify
+      - name: Verify universal
         run: |
           lipo -info dist/MeetingScheduler
           file dist/MeetingScheduler
