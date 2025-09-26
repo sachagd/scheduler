@@ -1,5 +1,5 @@
 import csv
-from math import exp
+from math import exp, log
 
 def parse_csv(filepath, encoding="utf-8-sig"):
     with open(filepath, "r", encoding=encoding, newline="") as f:
@@ -15,7 +15,23 @@ def parse_csv(filepath, encoding="utf-8-sig"):
         return rows
 
 arows = parse_csv("auteurs.csv")
-prows = parse_csv("producteurs.csv") 
+prows = parse_csv("producteurs.csv")
+contraintesf = parse_csv("contraintes.csv")
+
+for i in range(len(contraintesf)):
+    for j in range(1, len(contraintesf[i])):
+        contraintesf[i][j] = contraintesf[i][j].split("-")
+
+contraintes = {
+    row[0]: set(
+        s-1
+        for j in range(1, len(row))
+        for s in range(int(row[j][0]), int(row[j][1])+1)
+    )
+    for row in contraintesf
+}
+
+print(contraintes)
 
 na = len(arows)
 np = len(prows)
@@ -25,13 +41,19 @@ pindex = {prows[i][0]: i for i in range(np)}
 
 weights = [[0 for _ in range(na)] for _ in range(np)]
 
-for i in range(na):
-    for j in range(1,len(arows[i])):
-        weights[pindex[arows[i][j]]][i] += exp(3 * (na - j) / na) 
+c = log(2.0)
 
-for i in range(np):
-    for j in range(1,len(prows[i])):
-        weights[i][aindex[prows[i][j]]] += exp(3 * (np - j) / np)
+for a in range(na):
+    prefs = arows[a][1:]
+    for r, pname in enumerate(prefs):
+        weights[pindex[pname]][a] += exp(-c * r)
+
+for p in range(np):
+    prefs = prows[p][1:]
+    for r, aname in enumerate(prefs):
+        weights[p][aindex[aname]] += exp(-c * r)
+
+print(weights)
 
 with open("ncreneau.txt", "r", encoding="utf-8") as f:
     ncreneau = int(f.read().strip()) # nombre de créneaux
@@ -52,18 +74,21 @@ pam = [[] for _ in range(ncreneau)]
 meets = [[] for _ in range(ncreneau)]
 skipped = []
 
+allmeet = set(range(ncreneau))
+
 for _, p, a in candidates:
     i = 0
     c = True
     while i < ncreneau:
         if nam[i] < nmeet:
-            if not (p in pam[i] or a in aam[i]):
-                aam[i].append(a)
-                pam[i].append(p)
-                nam[i] += 1
-                meets[i].append((p, a))
-                c = False
-                break
+            if (i in contraintes.get(prows[p][0], allmeet)) and (i in contraintes.get(arows[a][0], allmeet)):
+                if not (p in pam[i] or a in aam[i]):
+                    aam[i].append(a)
+                    pam[i].append(p)
+                    nam[i] += 1
+                    meets[i].append((p, a))
+                    c = False
+                    break
         i += 1
     if c:
         skipped.append((p, a))
