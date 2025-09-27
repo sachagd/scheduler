@@ -31,8 +31,6 @@ contraintes = {
     for row in contraintesf
 }
 
-print(contraintes)
-
 na = len(arows)
 np = len(prows)
 
@@ -52,8 +50,6 @@ for p in range(np):
     prefs = prows[p][1:]
     for r, aname in enumerate(prefs):
         weights[p][aindex[aname]] += exp(-c * r)
-
-print(weights)
 
 with open("ncreneau.txt", "r", encoding="utf-8") as f:
     ncreneau = int(f.read().strip()) # nombre de créneaux
@@ -109,3 +105,38 @@ with open("meetings.csv", "w", newline="", encoding="utf-8-sig") as f:
 with open("skipped.txt", "w", encoding="utf-8-sig") as f:
     for p, a in skipped:
         f.write(f"{prows[p][0]} - {arows[a][0]}\n")
+
+authors_met = {a: set() for a in range(na)}
+producers_met = {p: set() for p in range(np)}
+for slot in meets:
+    for p, a in slot:
+        authors_met[a].add(p)
+        producers_met[p].add(a)
+
+auteurs_updated = []
+for a in range(na):
+    name = arows[a][0]
+    prefs = arows[a][1:]
+    met_names = {prows[p][0] for p in authors_met[a]}
+    new_prefs = [x for x in prefs if x not in met_names]
+    auteurs_updated.append([name] + new_prefs)
+
+producteurs_updated = []
+for p in range(np):
+    name = prows[p][0]
+    prefs = prows[p][1:]
+    met_names = {arows[a][0] for a in producers_met[p]}
+    new_prefs = [x for x in prefs if x not in met_names]
+    producteurs_updated.append([name] + new_prefs)
+
+with open("auteurs_updated.csv", "w", newline="", encoding="utf-8-sig") as f:
+    wr = csv.writer(f)
+    wr.writerow(["name", "wishlist"])
+    for row in auteurs_updated:
+        wr.writerow([row[0]] + row[1:])
+
+with open("producteurs_updated.csv", "w", newline="", encoding="utf-8-sig") as f:
+    wr = csv.writer(f)
+    wr.writerow(["name", "wishlist"])
+    for row in producteurs_updated:
+        wr.writerow([row[0]] + row[1:])
